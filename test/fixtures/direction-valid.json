@@ -1,0 +1,39 @@
+{
+  "directionId": "operator-proof-01",
+  "hook": "Most AI ads look expensive and say nothing useful.",
+  "premise": "Lead with the operator frustration, then show a tighter decision loop.",
+  "audiencePsychology": "This audience wants proof of competence more than flashy polish.",
+  "script": [
+    {
+      "tag": "fact",
+      "text": "OppScan organizes opportunity research into one workflow."
+    },
+    {
+      "tag": "claim",
+      "text": "That tighter workflow can help a small team act faster."
+    },
+    {
+      "tag": "hypothesis",
+      "text": "A blunt, anti-hype opening may stop more skeptical viewers."
+    }
+  ],
+  "storyboard": [
+    {
+      "timecodeStart": "00:00",
+      "timecodeEnd": "00:03",
+      "visualDirection": "Desk-level close-up of messy tabs snapping into a single clean dashboard.",
+      "audioNotes": "Dry, no-nonsense VO with a short glitch hit on the cut.",
+      "onScreenText": "Still drowning in tabs?"
+    },
+    {
+      "timecodeStart": "00:03",
+      "timecodeEnd": "00:09",
+      "visualDirection": "Fast over-the-shoulder demo beats showing the workflow compressing.",
+      "audioNotes": "VO tightens pace; subtle mechanical clicks under transitions.",
+      "onScreenText": "Research faster. Decide cleaner."
+    }
+  ],
+  "ctaText": "Book a demo and see the workflow on your own pipeline.",
+  "confidence": 0.74,
+  "rationale": "The direction stays factual, avoids hype, and matches an operator-minded buyer."
+}

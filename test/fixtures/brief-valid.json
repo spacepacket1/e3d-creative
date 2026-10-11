@@ -1,0 +1,13 @@
+{
+  "product": "OppScan",
+  "audience": "Owners of small HVAC shops who are skeptical of generic AI tools",
+  "objective": "Generate short-form ad concepts that emphasize practical workflow gains",
+  "baselineRef": "./baseline.txt",
+  "constraints": [
+    "No invented customer revenue claims",
+    "Keep the tone direct and operator-focused"
+  ],
+  "spendCeiling": null,
+  "metric": "qualified demo bookings",
+  "threshold": "at least 12 bookings in 14 days"
+}

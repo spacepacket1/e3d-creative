@@ -1,0 +1,16 @@
+{
+  "name": "e3d-creative",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Creative direction engine for structured brief and direction validation.",
+  "type": "module",
+  "bin": {
+    "e3d-creative": "./bin/e3d-creative"
+  },
+  "scripts": {
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

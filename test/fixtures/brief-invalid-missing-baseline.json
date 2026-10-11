@@ -1,0 +1,12 @@
+{
+  "product": "OppScan",
+  "audience": "Owners of small HVAC shops",
+  "objective": "Replace weak stock-footage ads",
+  "baselineRef": "./missing-baseline.txt",
+  "constraints": [
+    "No fabricated testimonials"
+  ],
+  "spendCeiling": 2500,
+  "metric": "cost per qualified lead",
+  "threshold": "under $150"
+}

@@ -1,0 +1,24 @@
+{
+  "directionId": "  ",
+  "hook": "New angle",
+  "premise": "Promise everything to everyone.",
+  "audiencePsychology": "Broad ambition beats specificity.",
+  "script": [
+    {
+      "tag": "assertion",
+      "text": ""
+    }
+  ],
+  "storyboard": [
+    {
+      "timecodeStart": "",
+      "timecodeEnd": "00:05",
+      "visualDirection": "",
+      "audioNotes": "Loud music",
+      "onScreenText": ""
+    }
+  ],
+  "ctaText": "Try it",
+  "confidence": 1.4,
+  "rationale": ""
+}
