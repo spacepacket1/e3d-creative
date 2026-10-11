@@ -54,11 +54,13 @@ test('provider implementations expose the same generate interface and response s
   const prompt = { systemPrompt: 'System prompt', userPrompt: 'User prompt', model: 'test-model' };
   assert.deepEqual(await claude.generate(prompt), {
     text: 'claude text',
-    usage: { input_tokens: 3, output_tokens: 5 }
+    usage: { input_tokens: 3, output_tokens: 5 },
+    model: 'test-model'
   });
   assert.deepEqual(await openai.generate(prompt), {
     text: 'openai text',
-    usage: { prompt_tokens: 7, completion_tokens: 11 }
+    usage: { prompt_tokens: 7, completion_tokens: 11 },
+    model: 'test-model'
   });
 
   assert.equal(calls.length, 2);
