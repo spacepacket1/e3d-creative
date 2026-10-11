@@ -68,6 +68,32 @@ test('provider implementations expose the same generate interface and response s
   assert.match(calls[1].request.headers.authorization, /^Bearer test-/);
 });
 
+test('claude provider defaults to a model and token ceiling confirmed working against the real API', async () => {
+  // Regression test for two bugs only a live (non-mocked) call surfaced:
+  // the original default model ('claude-sonnet-4-5') 404s against the real
+  // Anthropic API (retired), and the original default maxTokens (4096)
+  // truncates concept generation's realistic multi-direction JSON output
+  // mid-string. Both were fixed after a real end-to-end run against the
+  // actual API, not discovered by any mocked test -- this test pins the
+  // defaults so they can't silently regress back to the broken values,
+  // though it still can't catch a *future* retirement of the current model
+  // string the way a live call would.
+  let capturedBody = null;
+  const provider = createClaudeProvider({
+    apiKey: 'test-claude-key',
+    fetchImpl: async (_url, request) => {
+      capturedBody = JSON.parse(request.body);
+      return okJsonResponse({ content: [{ type: 'text', text: 'ok' }], usage: {} });
+    }
+  });
+
+  await provider.generate({ systemPrompt: 'System', userPrompt: 'User' });
+
+  assert.notEqual(capturedBody.model, 'claude-sonnet-4-5');
+  assert.match(capturedBody.model, /^claude-sonnet-5/);
+  assert.ok(capturedBody.max_tokens >= 8192, `expected max_tokens >= 8192, got ${capturedBody.max_tokens}`);
+});
+
 test('provider keys resolve from environment before configured key files', async () => {
   const tempDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-provider-'));
   const keyFile = path.join(tempDir, 'anthropic-api-key');

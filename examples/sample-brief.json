@@ -1,0 +1,14 @@
+{
+  "product": "OppScan (sanitized sample)",
+  "audience": "Owners of small HVAC shops who are skeptical of generic AI tools and need clearer opportunity triage",
+  "objective": "Develop short-form creative directions that stress practical workflow gains without overclaiming outcomes",
+  "baselineRef": null,
+  "constraints": [
+    "No invented customer revenue claims",
+    "Do not imply product capabilities the brief does not state",
+    "Keep the tone direct, operator-focused, and visually modern"
+  ],
+  "spendCeiling": null,
+  "metric": "qualified demo bookings",
+  "threshold": "at least 12 bookings in 14 days"
+}
