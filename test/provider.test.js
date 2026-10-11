@@ -165,10 +165,15 @@ test('concept generation and critique can select different providers in one run'
     systemPrompt: 'Critique',
     userPrompt: 'Direction'
   });
+  const qa = await generateForCallSite(context, 'qa', {
+    systemPrompt: 'QA',
+    userPrompt: 'Direction'
+  });
 
   assert.equal(concept.text, 'concept');
   assert.equal(critique.text, 'critique');
-  assert.deepEqual(calls.map((call) => call.provider), ['openai', 'claude']);
+  assert.equal(qa.text, 'concept');
+  assert.deepEqual(calls.map((call) => call.provider), ['openai', 'claude', 'openai']);
 });
 
 test('CLI-style provider flags override brief provider selection independently', () => {
@@ -176,6 +181,7 @@ test('CLI-style provider flags override brief provider selection independently',
     '--concept-provider=claude',
     '--critique-provider',
     'openai',
+    '--qa-provider=claude',
     'brief.json'
   ]);
 
@@ -190,7 +196,8 @@ test('CLI-style provider flags override brief provider selection independently',
     cliOptions: parsed.options
   }), {
     conceptGeneration: 'claude',
-    critique: 'openai'
+    critique: 'openai',
+    qa: 'claude'
   });
 });
 
