@@ -125,6 +125,7 @@ e3d-creative critique <concepts-dir> --out <dir> [--critique-provider <claude|op
 e3d-creative qa <concepts-dir> <critique-dir> --out <dir> [--qa-provider <claude|openai>]
 e3d-creative package <qa-dir>/<id>.visual-direction.json --out <dir> [--list]
 e3d-creative run <brief.json> --out <dir> [--concept-provider <claude|openai>] [--critique-provider <claude|openai>] [--qa-provider <claude|openai>]
+e3d-creative script-critique (--script <file> | --topic <text>) --out <dir> [--audience <text>] [--max-rounds <n>] [--critique-provider <claude|openai>] [--concept-provider <claude|openai>]
 ```
 
 Notes:
@@ -135,6 +136,18 @@ Notes:
 - `package` emits both `rich-artifact.json` and `cast-compatible.json`.
 - `cast-compatible.json` includes `unconsumedByCurrentPipeline` so dropped rich fields are explicit.
 - `package --list` prints each packaged direction id, verdict, QA score, and digest.
+- `script-critique` writes `script.txt` and `script-critique.json`; see below.
+
+### Script critique
+
+`script-critique` runs a bounded critique/revision loop over a spoken script.
+
+- **Rubric** (scored 1-5): hook, psychology, wording, and audience fit are primary; production is secondary.
+- **Speaker-line format guarantee**: every non-blank line of the final script is `Label: text`. A revision that breaks this format is discarded and the last valid script is kept.
+- **Modes**: `--script <file>` improves an existing script (the input must already be in `Label: text` format); `--topic <text>` writes a draft first, then critiques it. Exactly one of the two is required.
+- `--max-rounds` bounds revisions (default 2, capped at 3). `script-critique.json` records each round's verdict, scores, and notes.
+
+Wiring this into Cast's `pod2vidRoutes.js` happens in the spacepacket repo, not here.
 
 ## Provider Configuration
 
