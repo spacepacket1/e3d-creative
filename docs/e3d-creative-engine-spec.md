@@ -15,7 +15,7 @@ This spec covers the engine itself only — offline, recommend-only, no provider
 - Produce `>=3` genuinely distinct creative directions from one brief — not synonym rewrites of the same idea.
 - Each direction includes: hook (first three seconds), premise, audience psychology, full word-accurate script, timed shot-by-shot storyboard, and per-shot visual-style direction (references/prompts, not pixels).
 - Support real multi-model debate/critique with recorded dissent — not a single model's output rubber-stamped.
-- Support both Claude and OpenAI/Codex as interchangeable LLM providers for the engine's own generation/critique calls (its runtime dependency — distinct from, and unaffected by, s2c's own phase-execution provider used to *build* this repo).
+- Support both Claude and OpenAI/Codex as interchangeable LLM providers for the engine's own generation/critique calls (its runtime dependency — distinct from, and unaffected by, e3d-code's own phase-execution provider used to *build* this repo).
 - Independent QA scoring against a fixed rubric, separate from generation, so the engine can't grade its own homework with the same call that wrote the content.
 - Deterministic, regenerable, provenance-friendly output: same brief + same model/seed inputs produce comparable, content-addressable artifacts (SHA-256 digests on every generated file), matching the discipline e3d-pilot's own exports already use.
 
@@ -30,13 +30,13 @@ This spec covers the engine itself only — offline, recommend-only, no provider
 
 ## Running This Spec
 
-Run with s2c's default provider. `runner:model=claude:*` is safe to use as of `spec2code` commit `e34bcd4` (2026-10-11) — `CLAUDE_PERMISSION_MODE` now defaults to `bypassPermissions`, fixing the earlier silent-no-op bug (`default` mode denied every edit with no TTY to approve it, while still exiting 0).
+Run with e3d-code's default provider. `runner:model=claude:*` is safe to use as of `e3d-code` commit `e34bcd4` (2026-10-11) — `CLAUDE_PERMISSION_MODE` now defaults to `bypassPermissions`, fixing the earlier silent-no-op bug (`default` mode denied every edit with no TTY to approve it, while still exiting 0).
 
-No phase below carries an explicit `runner:model=` annotation — routing is left to `--auto-route` (`spec2code` commit `52bf165`), which classifies each phase's real complexity with one cheap model call instead of a keyword guess. Always pass `--auto-route`; without it, routing falls back to the static keyword heuristic, which does not know this is a multi-model debate/critique engine and may under-tier it. Live test runs against this spec with `--provider claude --auto-route` have landed anywhere from mostly `sonnet` with a couple `opus`/`haiku` outliers to as many as 5 of 7 phases rated `opus` — the classification is a real model judgment call each time, not a fixed table, so expect some run-to-run variance and check `.spec2code/route-cache.tsv` after a `--list` to see what this run actually decided before assuming cost. `--provider codex --auto-route` has so far rated every phase `default` (`gpt-5.4`) with no variance observed. Before running, also check `.spec2code/manifest.tsv` in the most recently-run repo for the last model (codex or claude) that actually completed a phase, since specific model strings go stale without warning on either provider.
+No phase below carries an explicit `runner:model=` annotation — routing is left to `--auto-route` (`e3d-code` commit `52bf165`), which classifies each phase's real complexity with one cheap model call instead of a keyword guess. Always pass `--auto-route`; without it, routing falls back to the static keyword heuristic, which does not know this is a multi-model debate/critique engine and may under-tier it. Live test runs against this spec with `--provider claude --auto-route` have landed anywhere from mostly `sonnet` with a couple `opus`/`haiku` outliers to as many as 5 of 7 phases rated `opus` — the classification is a real model judgment call each time, not a fixed table, so expect some run-to-run variance and check `.e3d-code/route-cache.tsv` after a `--list` to see what this run actually decided before assuming cost. `--provider codex --auto-route` has so far rated every phase `default` (`gpt-5.4`) with no variance observed. Before running, also check `.e3d-code/manifest.tsv` in the most recently-run repo for the last model (codex or claude) that actually completed a phase, since specific model strings go stale without warning on either provider.
 
 ```bash
-s2c docs/e3d-creative-engine-spec.md all --auto-route
-s2c docs/e3d-creative-engine-spec.md all --provider claude --auto-route
+e3d-code docs/e3d-creative-engine-spec.md all --auto-route
+e3d-code docs/e3d-creative-engine-spec.md all --provider claude --auto-route
 ```
 
 ## Existing Files (read first)
@@ -81,9 +81,9 @@ s2c docs/e3d-creative-engine-spec.md all --provider claude --auto-route
 
 ### Requirements
 
-- `lib/providers/` with a provider-agnostic interface (`generate({systemPrompt, userPrompt, model}) -> {text, usage}`) and two implementations: `claude.js` (Anthropic Messages API) and `openai.js` (OpenAI/Codex-compatible API). This is the engine's own runtime dependency for generation/critique calls — unrelated to and unaffected by which provider s2c itself used to write this code.
-- API keys resolved from environment first, falling back to a configurable key-file path (same pattern as `S2C_CLAUDE_API_KEY_FILE` in `bin/spec2code` and `~/.config/e3d-pilot/anthropic-api-key` on this machine) — never hardcoded, never logged.
-- A provider selection mechanism per call site (not global): the brief or CLI flag can request `claude` or `openai` for concept generation vs. critique independently, mirroring the "different phases, different providers" capability already proven in `spec2code`'s `tests/phase-13-mixed-provider-spec.sh`.
+- `lib/providers/` with a provider-agnostic interface (`generate({systemPrompt, userPrompt, model}) -> {text, usage}`) and two implementations: `claude.js` (Anthropic Messages API) and `openai.js` (OpenAI/Codex-compatible API). This is the engine's own runtime dependency for generation/critique calls — unrelated to and unaffected by which provider e3d-code itself used to write this code.
+- API keys resolved from environment first, falling back to a configurable key-file path (same pattern as `E3D_CODE_CLAUDE_API_KEY_FILE` in `bin/e3d-code` and `~/.config/e3d-pilot/anthropic-api-key` on this machine) — never hardcoded, never logged.
+- A provider selection mechanism per call site (not global): the brief or CLI flag can request `claude` or `openai` for concept generation vs. critique independently, mirroring the "different phases, different providers" capability already proven in `e3d-code`'s `tests/phase-13-mixed-provider-spec.sh`.
 - Tests use fake/stub provider binaries or injected fetch mocks — no real network calls, no real API spend, matching e3d-pilot's own test discipline.
 
 ### Acceptance Criteria
@@ -155,7 +155,7 @@ s2c docs/e3d-creative-engine-spec.md all --provider claude --auto-route
 
 - `bin/e3d-creative package <direction.json> --out <dir>` produces two things per Direction: (1) the full rich artifact (script, shot-by-shot visual direction, QA scores) as the durable record, and (2) a `cast-compatible.json` reduction shaped to match `e3d-cast`'s existing `cast_job` manifest `input: {kind: "transcript", text: ...}` field — today's only consumable path into the existing pipeline, per `e3d-cast/src/worker/index.js`.
 - The reduction must explicitly mark what it drops: a top-level `unconsumedByCurrentPipeline: ["shot.visualDirection", "shot.audioNotes", ...]` field listing exactly which rich fields have no consumer yet. Never silently collapse the shot-by-shot visual direction into nothing with no record that it existed.
-- `--list` output (matching s2c's and e3d-pilot's own CLI convention) showing each Direction's id, verdict, QA score summary, and digest, scannable without opening files.
+- `--list` output (matching e3d-code's and e3d-pilot's own CLI convention) showing each Direction's id, verdict, QA score summary, and digest, scannable without opening files.
 
 ### Acceptance Criteria
 

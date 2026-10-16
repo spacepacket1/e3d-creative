@@ -32,10 +32,10 @@ e3d-brain's invariant applies: **memory is advisory, never authority.** Nothing 
 
 ## Running This Spec
 
-Run with s2c's default provider and auto-routing:
+Run with e3d-code's default provider and auto-routing:
 
 ```bash
-s2c docs/e3d-creative-brain-claims-spec.md all --auto-route
+e3d-code docs/e3d-creative-brain-claims-spec.md all --auto-route
 ```
 
 Each phase has a `runner:verify` hook. Build on a branch; a different model reviews each phase diff; a human merges.

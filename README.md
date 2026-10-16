@@ -169,7 +169,8 @@ Claude lookup order:
 - `ANTHROPIC_API_KEY`
 - `CLAUDE_API_KEY`
 - `E3D_CLAUDE_API_KEY_FILE`
-- `S2C_CLAUDE_API_KEY_FILE`
+- `E3D_CODE_CLAUDE_API_KEY_FILE`
+- `S2C_CLAUDE_API_KEY_FILE` (pre-rename name of the same variable)
 - default key file: `~/.config/e3d-pilot/anthropic-api-key`
 
 OpenAI lookup order:
