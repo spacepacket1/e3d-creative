@@ -199,3 +199,7 @@ The transcript reduction intentionally does not pretend to preserve shot-level
 visual guidance. Dropped fields are listed in
 `unconsumedByCurrentPipeline`, including fields such as
 `shot.visualDirection` and `shot.audioNotes`.
+
+## License
+
+[MIT](LICENSE) © 2026 FutCo LLC. Part of the [FutCo](https://futco.ai/projects) open-source ecosystem.
