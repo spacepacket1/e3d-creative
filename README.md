@@ -124,7 +124,8 @@ e3d-creative concepts <brief.json> --out <dir> [--concept-provider <claude|opena
 e3d-creative critique <concepts-dir> --out <dir> [--critique-provider <claude|openai>]
 e3d-creative qa <concepts-dir> <critique-dir> --out <dir> [--qa-provider <claude|openai>]
 e3d-creative package <qa-dir>/<id>.visual-direction.json --out <dir> [--list]
-e3d-creative run <brief.json> --out <dir> [--concept-provider <claude|openai>] [--critique-provider <claude|openai>] [--qa-provider <claude|openai>]
+e3d-creative run <brief.json> --out <dir> [--concept-provider <claude|openai>] [--critique-provider <claude|openai>] [--qa-provider <claude|openai>] [--claims-check] [--check-provider <claude|openai>] [--brain-config <path>] [--brain-main <path>]
+e3d-creative claims-check <direction.json> --brief <brief.json> --out <dir> [--check-provider <claude|openai>] [--brain-config <path>] [--brain-main <path>] [--fail-on-unsupported]
 e3d-creative script-critique (--script <file> | --topic <text>) --out <dir> [--audience <text>] [--max-rounds <n>] [--critique-provider <claude|openai>] [--concept-provider <claude|openai>]
 ```
 
@@ -136,6 +137,8 @@ Notes:
 - `package` emits both `rich-artifact.json` and `cast-compatible.json`.
 - `cast-compatible.json` includes `unconsumedByCurrentPipeline` so dropped rich fields are explicit.
 - `package --list` prints each packaged direction id, verdict, QA score, and digest.
+- `run --claims-check` adds advisory claims-check reports under `<out>/claims/` and preserves the existing exit behavior.
+- `claims-check` writes `<directionId>.claims-check.json` plus a `.sha256` sidecar.
 - `script-critique` writes `script.txt` and `script-critique.json`; see below.
 
 ### Script critique
@@ -200,6 +203,137 @@ The transcript reduction intentionally does not pretend to preserve shot-level
 visual guidance. Dropped fields are listed in
 `unconsumedByCurrentPipeline`, including fields such as
 `shot.visualDirection` and `shot.audioNotes`.
+
+## Grounding Claims From e3d-brain
+
+Approved-claims grounding is opt-in and advisory. It is designed for a dedicated
+claims-only `e3d-brain` vault, not a general knowledge vault.
+
+### Worked note format
+
+The reader expects note bodies that validate as product-claim notes and stable
+brain metadata with assigned ids. After humans approve or revise notes, run:
+
+```bash
+ebrain ids assign /path/to/claims-vault
+```
+
+Example approved notes for product `e3d-brain`:
+
+```reference-data
+{"id":"01ARZ3NDEKTSV4RRFFQ69G5FAV","provisional":false,"rev":"0123456789abcdef","status":"approved","kind":"product-claim","path":"claims/e3d-brain/retrieval-only.md","citation":"note:01ARZ3NDEKTSV4RRFFQ69G5FAV@0123456789abcdef"}
+
+---
+kind: product-claim
+product: "e3d-brain"
+status: "approved"
+approved_by: "Ada Lovelace"
+approved_on: "2026-10-10"
+expires: "2026-12-31"
+evidence:
+  - "Internal product review notes, October 2026."
+allowed_wording: "Say it retrieves approved internal notes for review."
+forbidden_wording:
+  - "It knows everything your company knows."
+---
+
+Claim:
+e3d-brain retrieves approved internal notes for review workflows.
+```
+
+```reference-data
+{"id":"01ARZ3NDEKTSV4RRFFQ69G5FAW","provisional":false,"rev":"fedcba9876543210","status":"approved","kind":"product-claim","path":"claims/e3d-brain/claims-only-vault.md","citation":"note:01ARZ3NDEKTSV4RRFFQ69G5FAW@fedcba9876543210"}
+
+---
+kind: product-claim
+product: "e3d-brain"
+status: "approved"
+approved_by: "Grace Hopper"
+approved_on: "2026-10-10"
+expires: "2026-12-31"
+evidence:
+  - "Product design review signed off by the claims workflow owners."
+allowed_wording: "Describe it as operating against a claims-only vault."
+forbidden_wording:
+  - "Point it at any general vault."
+---
+
+Claim:
+e3d-brain can be configured against a claims-only vault for approved product claims.
+```
+
+```reference-data
+{"id":"01ARZ3NDEKTSV4RRFFQ69G5FAX","provisional":false,"rev":"1111111111111111","status":"approved","kind":"product-claim","path":"claims/e3d-brain/human-approval.md","citation":"note:01ARZ3NDEKTSV4RRFFQ69G5FAX@1111111111111111"}
+
+---
+kind: product-claim
+product: "e3d-brain"
+status: "approved"
+approved_by: "Katherine Johnson"
+approved_on: "2026-10-10"
+expires: "2026-12-31"
+evidence:
+  - "Launch checklist reviewed with the approving operators."
+allowed_wording: "Say humans approve the claims before use."
+forbidden_wording:
+  - "Approval is automatic."
+---
+
+Claim:
+Only approved claim notes created by human approvers are eligible for grounding.
+```
+
+### Vault setup
+
+- Create a dedicated claims-only, read-only brain instance whose notes live under `claims/<product-slug>/`.
+- Give `e3d-creative` read-only access to that instance.
+- Only authorized approving humans may write to the claims vault.
+- Do not point this feature at a general vault, mixed research vault, or any writable-by-automation vault.
+
+### Running checks
+
+Run a single check:
+
+```bash
+e3d-creative claims-check direction.json --brief brief.json --out /tmp/claims-check --brain-main /path/to/e3d-brain --brain-config /path/to/brain-config.json
+```
+
+Run the full engine with post-QA checks:
+
+```bash
+e3d-creative run brief.json --out /tmp/e3d-run --claims-check --brain-main /path/to/e3d-brain --brain-config /path/to/brain-config.json
+```
+
+Retrieval status values:
+
+- `ok`: approved claims were loaded and the checker can run.
+- `empty`: the scoped claims folder was reachable but no approved claims were usable.
+- `unavailable`: the brain instance was not configured or could not be read safely.
+
+Check status values:
+
+- `passed`: no forbidden or unsupported findings.
+- `findings`: one or more forbidden or unsupported findings were recorded.
+- `failed`: the checker attempted a run but the provider or model output failed validation.
+- `not-run`: no checker model call was made because grounding was `empty` or `unavailable`.
+
+Exit codes for `claims-check`:
+
+- `0`: passed, findings, or default unsupported results when `--fail-on-unsupported` is not set.
+- `3`: unsupported findings with `--fail-on-unsupported`.
+- `4`: failed.
+- `5`: not-run.
+
+`run --claims-check` is fail-open. It writes advisory reports but preserves the
+engine's normal run exit behavior.
+
+### Limits and handling
+
+- Reports contain citations, digests, and findings metadata; they do not persist raw approved-claim text.
+- This is advisory-only behavior and required human judgment still applies before any public claim is shipped.
+- A passed check does not prove a claim is true, complete, current, or legally safe.
+- A failed or not-run check should block trust, not replace review.
+- Known limits: the checker only sees retrieved approved notes, it can miss subtle paraphrases, and it does not auto-recheck when a relied-on claim later changes or expires.
 
 ## License
 
