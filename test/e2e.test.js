@@ -349,6 +349,40 @@ test('run command without --claims-check preserves the pre-change artifact set a
   assert.equal((await listRelativeFiles(outDir)).some((file) => file.startsWith('claims/')), false);
 });
 
+test('run command with --claims-check and an unusable check provider still finishes and records a failed check', async () => {
+  const briefPath = path.join(examplesDir, 'sample-brief.json');
+  const outDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-e2e-run-claims-noprovider-'));
+  const providerContext = createStubProviderContext();
+  const { configPath } = await createBrainScenario({
+    tools: ['search', 'read_note', 'list_notes', 'related', 'read_ref_chunk', 'report_use'],
+    listEntries: [metadataFor('claims/oppscan-sanitized-sample/approved.md')],
+    readNotes: {
+      'claims/oppscan-sanitized-sample/approved.md': {
+        metadata: metadataFor('claims/oppscan-sanitized-sample/approved.md'),
+        noteText: claimNoteText()
+      }
+    }
+  });
+
+  await captureStdout(async () => {
+    await main([
+      'run', briefPath, '--out', outDir, '--claims-check', '--check-provider', 'not-a-provider',
+      '--brain-main', brainStubPath, '--brain-config', configPath
+    ], { providerContext, now: () => '2026-10-17T20:00:00.000Z' });
+  });
+
+  const qaManifest = await readJsonFile(path.join(outDir, 'qa', 'qa-manifest.json'));
+  assert.ok(qaManifest.directions.length > 0);
+  assert.equal(providerContext.callCounters.claimsCheck, 0);
+  for (const item of qaManifest.directions) {
+    const report = JSON.parse(await readFile(path.join(outDir, 'claims', `${item.directionId}.claims-check.json`), 'utf8'));
+    assert.equal(report.checkStatus, 'failed');
+    assert.equal(report.checkReason, 'provider-unavailable');
+  }
+  const packageFiles = await readdir(path.join(outDir, 'package'));
+  assert.ok(packageFiles.length > 0, 'the rest of the run (packaging) still completed');
+});
+
 test('run command with --claims-check writes one report and digest sidecar per QA direction', async () => {
   const briefPath = path.join(examplesDir, 'sample-brief.json');
   const outDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-e2e-run-claims-'));

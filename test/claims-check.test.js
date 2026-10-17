@@ -615,3 +615,35 @@ test('claims-check CLI maps failed and not-run statuses to strict exit codes', a
   );
   assert.equal(notRun.exitCode, 5);
 });
+
+test('forbidden wording matches decomposed and composed accents in either direction', async () => {
+  const composedText = createDirection({ hook: 'Caf\u00e9 grade results for every team.' });
+  const decomposedText = createDirection({ hook: 'Cafe\u0301 grade results for every team.' });
+  const claimsWith = (phrase) => createClaimsResult({
+    claims: [{ ...createClaimsResult().claims[0], forbiddenWording: [phrase] }]
+  });
+  const empty = stubProvider(JSON.stringify({ assertions: [] }));
+
+  for (const [direction, phrase, label] of [
+    [decomposedText, 'caf\u00e9 grade', 'decomposed text, composed phrase'],
+    [composedText, 'cafe\u0301 grade', 'composed text, decomposed phrase'],
+    [decomposedText, 'cafe\u0301 grade', 'decomposed text, decomposed phrase']
+  ]) {
+    const result = await checkClaims({ direction, claimsResult: claimsWith(phrase), provider: empty });
+    const forbidden = result.findings.filter((finding) => finding.type === 'forbidden');
+    assert.equal(forbidden.length, 1, label);
+    assert.equal(forbidden[0].location, 'hook', label);
+  }
+});
+
+test('a missing check provider fails open: failed status with deterministic findings, no throw', async () => {
+  const result = await checkClaims({
+    direction: createDirection(),
+    claimsResult: createClaimsResult(),
+    provider: null
+  });
+  assert.equal(result.checkStatus, 'failed');
+  assert.equal(result.checkReason, 'provider-unavailable');
+  assert.equal(result.checkedBy, null);
+  assert.ok(result.findings.some((finding) => finding.type === 'forbidden'), 'forbidden-wording findings are kept');
+});
