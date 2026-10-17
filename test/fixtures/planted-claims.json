@@ -1,0 +1,52 @@
+[
+  {
+    "id": "planted-01",
+    "sentence": "Invented product assertion 1: e3d-brain has a government security clearance built in.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-02",
+    "sentence": "Invented product assertion 2: every generated claim is automatically approved by legal.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-03",
+    "sentence": "Invented product assertion 3: the system guarantees a 10x conversion lift in one week.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-04",
+    "sentence": "Invented product assertion 4: e3d-brain writes directly into any customer vault without review.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-05",
+    "sentence": "Invented product assertion 5: the product can certify medical claims for regulated ads.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-06",
+    "sentence": "Invented product assertion 6: one click turns any draft note into approved policy.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-07",
+    "sentence": "Invented product assertion 7: the platform already contains every product fact your company knows.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-08",
+    "sentence": "Invented product assertion 8: the checker can replace human approval for public claims.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-09",
+    "sentence": "Invented product assertion 9: it retrieves notes from any general vault with zero scoping risk.",
+    "expectedTrigger": "unsupported"
+  },
+  {
+    "id": "planted-10",
+    "sentence": "Invented product assertion 10: every note in the system is always current forever.",
+    "expectedTrigger": "unsupported"
+  }
+]

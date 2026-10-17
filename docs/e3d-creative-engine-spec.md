@@ -185,3 +185,6 @@ e3d-code docs/e3d-creative-engine-spec.md all --provider claude --auto-route
 - Wiring e3d-corp's "commission creative directly" Proposal type (see manifesto §3) to call this engine.
 - A new `e3d-pod2vid` provider adapter capable of consuming `shot.visualDirection` instead of discarding it — the actual fix for "looks like the 80s."
 - Ingesting this spec and its outcome into e3d-pilot's provenance-tracked idea ledger via `ideas ingest` + real `negotiate`/`review` rounds, once this document is reviewed.
+- Optional claim injection into generation and critique prompts, but only if the evaluation results justify adding it.
+- Automatic re-check when a relied-on claim is revised or expires.
+- The evaluation-driven decision on whether claims injection belongs in the engine at all.

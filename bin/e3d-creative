@@ -4,5 +4,7 @@ import { main } from '../lib/cli.js';
 main(process.argv.slice(2)).catch((error) => {
   const message = error instanceof Error ? error.message : String(error);
   process.stderr.write(`${message}\n`);
-  process.exitCode = 1;
+  process.exitCode = error && typeof error === 'object' && Number.isInteger(error.exitCode)
+    ? error.exitCode
+    : 1;
 });

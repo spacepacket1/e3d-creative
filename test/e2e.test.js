@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { access, mkdtemp, readFile, readdir, writeFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { main } from '../lib/cli.js';
@@ -8,6 +8,8 @@ import { normalizeBriefInput, readJsonFile } from '../lib/schema.js';
 
 const rootDir = process.cwd();
 const examplesDir = path.join(rootDir, 'examples');
+const fixturesDir = path.join(rootDir, 'test', 'fixtures');
+const brainStubPath = path.join(fixturesDir, 'brain-stub.js');
 
 function createConceptBatch() {
   return {
@@ -132,7 +134,7 @@ function createQaPayload(direction) {
   });
 }
 
-function createStubProviderContext() {
+function createStubProviderContext({ checkAssertions = () => [], callCounters } = {}) {
   const directions = new Map(
     createConceptBatch().directions.map((direction) => [direction.directionId, direction])
   );
@@ -143,6 +145,12 @@ function createStubProviderContext() {
     { verdict: 'reject', reasoning: 'A second pass still leaves the proof too abstract.', dissent: 'The rebuttal did not fix the evidence gap.' }
   ];
   let critiqueIndex = 0;
+  const counters = callCounters ?? {
+    generation: 0,
+    critique: 0,
+    qa: 0,
+    claimsCheck: 0
+  };
 
   return {
     selection: {
@@ -152,8 +160,10 @@ function createStubProviderContext() {
     },
     registry: {
       claude: {
+        name: 'claude',
         async generate(request) {
           if (request.systemPrompt.includes('You generate creative directions as strict JSON.')) {
+            counters.generation += 1;
             return {
               text: JSON.stringify(createConceptBatch()),
               usage: { output_tokens: 1 },
@@ -161,6 +171,7 @@ function createStubProviderContext() {
             };
           }
 
+          counters.qa += 1;
           const directionId = request.userPrompt.includes('"directionId": "direction-2"')
             ? 'direction-2'
             : 'direction-1';
@@ -172,7 +183,20 @@ function createStubProviderContext() {
         }
       },
       openai: {
-        async generate() {
+        name: 'openai',
+        async generate(request) {
+          if (request.systemPrompt.includes('You check a creative direction against approved-claims reference data and return strict JSON.')) {
+            counters.claimsCheck += 1;
+            return {
+              text: JSON.stringify({
+                assertions: checkAssertions(request)
+              }),
+              usage: { completion_tokens: 1 },
+              model: 'stub-openai-check'
+            };
+          }
+
+          counters.critique += 1;
           const response = critiqueSequence[critiqueIndex];
           critiqueIndex += 1;
           return {
@@ -182,8 +206,79 @@ function createStubProviderContext() {
           };
         }
       }
-    }
+    },
+    callCounters: counters
   };
+}
+
+function metadataFor(pathValue, overrides = {}) {
+  const metadata = {
+    id: '01ARZ3NDEKTSV4RRFFQ69G5FAV',
+    provisional: false,
+    rev: '0123456789abcdef',
+    status: 'approved',
+    kind: 'product-claim',
+    path: pathValue,
+    ...overrides
+  };
+  metadata.citation = `note:${metadata.id}@${metadata.rev}`;
+  return metadata;
+}
+
+function claimNoteText({
+  product = 'OppScan (sanitized sample)',
+  claim = 'OppScan helps owners of small HVAC shops evaluate opportunities.',
+  allowedWording = 'Describe it as helping owners evaluate opportunities.',
+  forbiddenWording = ['guaranteed close rate increase'],
+  approvedBy = 'Ada Lovelace',
+  approvedOn = '2026-10-10',
+  expires = '2026-12-31'
+} = {}) {
+  const forbiddenText = forbiddenWording.map((item) => `  - ${JSON.stringify(item)}`).join('\n');
+  return [
+    '---',
+    'kind: product-claim',
+    `product: ${JSON.stringify(product)}`,
+    'status: "approved"',
+    `approved_by: ${JSON.stringify(approvedBy)}`,
+    `approved_on: ${JSON.stringify(approvedOn)}`,
+    `expires: ${JSON.stringify(expires)}`,
+    'evidence:',
+    '  - "Reviewed by product team."',
+    `allowed_wording: ${JSON.stringify(allowedWording)}`,
+    'forbidden_wording:',
+    forbiddenText,
+    '---',
+    '',
+    'Claim:',
+    claim
+  ].join('\n') + '\n';
+}
+
+async function createBrainScenario(scenario) {
+  const dir = await mkdtemp(path.join(os.tmpdir(), 'e3d-phase3-brain-'));
+  const configPath = path.join(dir, 'brain-config.json');
+  const recordPath = path.join(dir, 'record.json');
+  await writeFile(configPath, JSON.stringify({ ...scenario, recordPath }, null, 2), 'utf8');
+  return { configPath, recordPath };
+}
+
+async function readRecord(recordPath) {
+  return JSON.parse(await readFile(recordPath, 'utf8'));
+}
+
+async function listRelativeFiles(dir, relativeDir = '') {
+  const entries = await readdir(path.join(dir, relativeDir), { withFileTypes: true });
+  const files = [];
+  for (const entry of entries) {
+    const relativePath = path.join(relativeDir, entry.name);
+    if (entry.isDirectory()) {
+      files.push(...await listRelativeFiles(dir, relativePath));
+      continue;
+    }
+    files.push(relativePath);
+  }
+  return files.sort();
 }
 
 async function captureStdout(run) {
@@ -208,13 +303,19 @@ async function captureStdout(run) {
   return output;
 }
 
-test('run command executes phases 3-6 end to end against stub providers with the sample brief', async () => {
+test('run command without --claims-check preserves the pre-change artifact set and makes no claims calls', async () => {
   const briefPath = path.join(examplesDir, 'sample-brief.json');
   const outDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-e2e-run-'));
+  const providerContext = createStubProviderContext();
+  let fetchClaimsCalls = 0;
   const output = await captureStdout(async () => {
     await main(['run', briefPath, '--out', outDir], {
-      providerContext: createStubProviderContext(),
-      now: () => '2026-10-11T20:00:00.000Z'
+      providerContext,
+      now: () => '2026-10-11T20:00:00.000Z',
+      fetchApprovedClaimsImpl: async () => {
+        fetchClaimsCalls += 1;
+        throw new Error('claims fetch should not run without --claims-check');
+      }
     });
   });
 
@@ -236,6 +337,117 @@ test('run command executes phases 3-6 end to end against stub providers with the
   assert.ok(Array.isArray(castCompatible.unconsumedByCurrentPipeline));
   assert.ok(castCompatible.unconsumedByCurrentPipeline.length > 0);
   assert.ok(castCompatible.unconsumedByCurrentPipeline.includes('shot.visualDirection'));
+
+  assert.equal(fetchClaimsCalls, 0);
+  assert.deepEqual(providerContext.callCounters, {
+    generation: 1,
+    critique: 4,
+    qa: 2,
+    claimsCheck: 0
+  });
+  await assert.rejects(() => access(path.join(outDir, 'claims')));
+  assert.equal((await listRelativeFiles(outDir)).some((file) => file.startsWith('claims/')), false);
+});
+
+test('run command with --claims-check and an unusable check provider still finishes and records a failed check', async () => {
+  const briefPath = path.join(examplesDir, 'sample-brief.json');
+  const outDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-e2e-run-claims-noprovider-'));
+  const providerContext = createStubProviderContext();
+  const { configPath } = await createBrainScenario({
+    tools: ['search', 'read_note', 'list_notes', 'related', 'read_ref_chunk', 'report_use'],
+    listEntries: [metadataFor('claims/oppscan-sanitized-sample/approved.md')],
+    readNotes: {
+      'claims/oppscan-sanitized-sample/approved.md': {
+        metadata: metadataFor('claims/oppscan-sanitized-sample/approved.md'),
+        noteText: claimNoteText()
+      }
+    }
+  });
+
+  await captureStdout(async () => {
+    await main([
+      'run', briefPath, '--out', outDir, '--claims-check', '--check-provider', 'not-a-provider',
+      '--brain-main', brainStubPath, '--brain-config', configPath
+    ], { providerContext, now: () => '2026-10-17T20:00:00.000Z' });
+  });
+
+  const qaManifest = await readJsonFile(path.join(outDir, 'qa', 'qa-manifest.json'));
+  assert.ok(qaManifest.directions.length > 0);
+  assert.equal(providerContext.callCounters.claimsCheck, 0);
+  for (const item of qaManifest.directions) {
+    const report = JSON.parse(await readFile(path.join(outDir, 'claims', `${item.directionId}.claims-check.json`), 'utf8'));
+    assert.equal(report.checkStatus, 'failed');
+    assert.equal(report.checkReason, 'provider-unavailable');
+  }
+  const packageFiles = await readdir(path.join(outDir, 'package'));
+  assert.ok(packageFiles.length > 0, 'the rest of the run (packaging) still completed');
+});
+
+test('run command with --claims-check writes one report and digest sidecar per QA direction', async () => {
+  const briefPath = path.join(examplesDir, 'sample-brief.json');
+  const outDir = await mkdtemp(path.join(os.tmpdir(), 'e3d-e2e-run-claims-'));
+  const providerContext = createStubProviderContext({
+    checkAssertions: () => ([
+      {
+        quote: 'OppScan helps owners of small HVAC shops evaluate opportunities.',
+        location: 'script:1',
+        classification: 'supported',
+        claim: 1,
+        claimQuote: 'helps owners of small HVAC shops evaluate opportunities'
+      }
+    ])
+  });
+  const { configPath, recordPath } = await createBrainScenario({
+    tools: ['search', 'read_note', 'list_notes', 'related', 'read_ref_chunk', 'report_use'],
+    listEntries: [
+      metadataFor('claims/oppscan-sanitized-sample/approved.md')
+    ],
+    readNotes: {
+      'claims/oppscan-sanitized-sample/approved.md': {
+        metadata: metadataFor('claims/oppscan-sanitized-sample/approved.md'),
+        noteText: claimNoteText()
+      }
+    }
+  });
+
+  const output = await captureStdout(async () => {
+    await main([
+      'run',
+      briefPath,
+      '--out',
+      outDir,
+      '--claims-check',
+      '--brain-main',
+      brainStubPath,
+      '--brain-config',
+      configPath
+    ], {
+      providerContext,
+      now: () => '2026-10-17T20:00:00.000Z'
+    });
+  });
+
+  assert.match(output, /claims:/i);
+
+  const qaManifest = await readJsonFile(path.join(outDir, 'qa', 'qa-manifest.json'));
+  const claimFiles = await readdir(path.join(outDir, 'claims'));
+  assert.equal(claimFiles.length, qaManifest.directions.length * 2);
+  assert.equal(providerContext.callCounters.claimsCheck, qaManifest.directions.length);
+
+  for (const item of qaManifest.directions) {
+    const reportPath = path.join(outDir, 'claims', `${item.directionId}.claims-check.json`);
+    const digestPath = `${reportPath}.sha256`;
+    const report = JSON.parse(await readFile(reportPath, 'utf8'));
+    const digest = await readFile(digestPath, 'utf8');
+    assert.equal(report.claimGrounding, 'ok');
+    assert.equal(report.checkStatus, 'passed');
+    assert.equal(report.checkedBy.provider, 'openai');
+    assert.match(digest, /^[0-9a-f]{64}\n$/);
+  }
+
+  const record = await readRecord(recordPath);
+  assert.equal(record.calls.some((call) => call.method === 'tools/call' && call.params?.name === 'list_notes'), true);
+  assert.equal(record.calls.some((call) => call.method === 'tools/call' && call.params?.name === 'read_note'), true);
 });
 
 test('sample brief validates and README documents the current offline scope and usage', async () => {
@@ -249,6 +461,12 @@ test('sample brief validates and README documents the current offline scope and 
   assert.match(readme, /## Direction Schema/);
   assert.match(readme, /## CLI/);
   assert.match(readme, /## Provider Configuration/);
+  assert.match(readme, /Grounding claims from e3d-brain/i);
+  assert.match(readme, /ebrain ids assign/i);
+  assert.match(readme, /claims-only, read-only/i);
+  assert.match(readme, /authorized approving humans/i);
+  assert.match(readme, /advisory-only/i);
+  assert.match(readme, /fail-open/i);
   assert.match(readme, /no rendering/i);
   assert.match(readme, /no e3d-corp integration/i);
   assert.match(readme, /no spend authority/i);
