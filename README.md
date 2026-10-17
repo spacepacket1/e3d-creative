@@ -332,6 +332,11 @@ rule: running it again into the same `--out` directory replaces that directory's
 included. Within one run, two directions with the same `directionId` are rejected rather than overwriting each
 other.
 
+The brain client speaks e3d-brain's MCP stdio transport (one JSON object per line) and reads `list_notes` and
+`read_note` results as e3d-brain returns them. `test/brain-real.test.js` checks this against a real e3d-brain
+(set `E3D_CREATIVE_TEST_EBRAIN_MAIN` to its `dist/src/cli/main.js`); the stub-based tests cannot catch a mismatch
+with the real server.
+
 ### Limits and handling
 
 - Reports contain citations, digests, and findings metadata; they do not persist raw approved-claim text.

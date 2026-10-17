@@ -446,7 +446,8 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
   assert.equal(record.env.EBRAIN_CONFIG, configPath);
   assert.equal(record.env.ANTHROPIC_API_KEY, undefined);
   assert.equal(record.env.OPENAI_API_KEY, undefined);
-  assert.match(record.rawFrames[0], /^Content-Length: \d+\r\n\r\n\{/);
+  assert.match(record.rawFrames[0], /^\{.*\}$/u, 'one JSON object per line, as the real e3d-brain server speaks');
+  assert.equal(record.rawFrames[0].includes('Content-Length'), false);
   assert.equal(record.calls.filter((call) => call.method === 'tools/call').every((call) =>
     ['list_notes', 'read_note'].includes(call.params.name)
   ), true);
@@ -455,7 +456,7 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
   assert.deepEqual(listCall.params.arguments, {
     folder: 'claims/widget-pro/',
     limit: 51,
-    format: 'jsonl'
+    format: 'compact'
   });
 
   const readCalls = record.calls.filter((call) => call.method === 'tools/call' && call.params.name === 'read_note');
