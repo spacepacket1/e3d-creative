@@ -5,6 +5,7 @@ import os from 'node:os';
 import path from 'node:path';
 import { main } from '../lib/cli.js';
 import {
+  assertUniqueReportId,
   checkClaims,
   CLAIMS_CHECK_DISCLAIMER,
   CLAIMS_NOT_CHECKED_REASON,
@@ -646,4 +647,11 @@ test('a missing check provider fails open: failed status with deterministic find
   assert.equal(result.checkReason, 'provider-unavailable');
   assert.equal(result.checkedBy, null);
   assert.ok(result.findings.some((finding) => finding.type === 'forbidden'), 'forbidden-wording findings are kept');
+});
+
+test('assertUniqueReportId rejects a second direction with the same id instead of overwriting', () => {
+  const seen = new Set();
+  assertUniqueReportId(seen, 'direction-1');
+  assertUniqueReportId(seen, 'direction-2');
+  assert.throws(() => assertUniqueReportId(seen, 'direction-1'), /duplicate directionId/);
 });

@@ -185,6 +185,14 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
     status: 'draft',
     claim: 'Draft claims do not count.'
   });
+  const rejectedText = claimNoteText({
+    status: 'rejected',
+    claim: 'A rejected claim is not approved.'
+  });
+  const retiredText = claimNoteText({
+    status: 'retired',
+    claim: 'A retired claim is not approved.'
+  });
   const wrongProductText = claimNoteText({
     product: 'Different Product',
     claim: 'This belongs to another product.'
@@ -226,6 +234,16 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
       id: '01ARZ3NDEKTSV4RRFFQ69G5FAY',
       rev: '0000000000000002',
       status: 'draft'
+    }),
+    metadataFor('claims/widget-pro/d-rejected.md', {
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FC1',
+      rev: '0000000000000021',
+      status: 'rejected'
+    }),
+    metadataFor('claims/widget-pro/d-retired.md', {
+      id: '01ARZ3NDEKTSV4RRFFQ69G5FC2',
+      rev: '0000000000000022',
+      status: 'retired'
     }),
     metadataFor('claims/widget-pro/q-wrong-product.md', {
       id: '01ARZ3NDEKTSV4RRFFQ69G5FAZ',
@@ -301,6 +319,22 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
         status: 'draft'
       }),
       noteText: unapprovedText
+    },
+    'claims/widget-pro/d-rejected.md': {
+      metadata: metadataFor('claims/widget-pro/d-rejected.md', {
+        id: '01ARZ3NDEKTSV4RRFFQ69G5FC1',
+        rev: '0000000000000021',
+        status: 'rejected'
+      }),
+      noteText: rejectedText
+    },
+    'claims/widget-pro/d-retired.md': {
+      metadata: metadataFor('claims/widget-pro/d-retired.md', {
+        id: '01ARZ3NDEKTSV4RRFFQ69G5FC2',
+        rev: '0000000000000022',
+        status: 'retired'
+      }),
+      noteText: retiredText
     },
     'claims/widget-pro/q-wrong-product.md': {
       metadata: metadataFor('claims/widget-pro/q-wrong-product.md', {
@@ -385,13 +419,13 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
   assert.equal(result.claimGrounding, 'ok');
   assert.equal(result.notesTruncated, false);
   assert.deepEqual(result.counts, {
-    fetched: 15,
+    fetched: 17,
     kept: 2,
     'out-of-folder': 1,
     'no-stable-id': 1,
     malformed: 8,
     'wrong-product': 1,
-    unapproved: 1,
+    unapproved: 3,
     expired: 1
   });
   assert.deepEqual(result.claims.map((claim) => claim.path), [
@@ -425,7 +459,7 @@ test('fetchApprovedClaims keeps only approved in-folder stable claims and uses d
   });
 
   const readCalls = record.calls.filter((call) => call.method === 'tools/call' && call.params.name === 'read_note');
-  assert.equal(readCalls.length, 13);
+  assert.equal(readCalls.length, 15);
   assert.equal(readCalls.every((call) => call.params.arguments.max_chars === 4000), true);
   assertProcessGone(record.pid);
 });

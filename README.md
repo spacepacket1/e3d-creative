@@ -327,6 +327,11 @@ Exit codes for `claims-check`:
 `run --claims-check` is fail-open. It writes advisory reports but preserves the
 engine's normal run exit behavior.
 
+Report files: `claims-check` refuses to overwrite an existing report. `run --claims-check` follows `run`'s own
+rule: running it again into the same `--out` directory replaces that directory's artifacts, claims reports
+included. Within one run, two directions with the same `directionId` are rejected rather than overwriting each
+other.
+
 ### Limits and handling
 
 - Reports contain citations, digests, and findings metadata; they do not persist raw approved-claim text.
