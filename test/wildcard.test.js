@@ -4,7 +4,7 @@ import { mkdtemp, readFile } from 'node:fs/promises';
 import os from 'node:os';
 import path from 'node:path';
 import { main } from '../lib/cli.js';
-import { normalizeEvidence, parseIdeas, parseSelection, runWildcard, buildWildcardPrompts } from '../lib/wildcard.js';
+import { extractJson, normalizeEvidence, parseIdeas, parseSelection, runWildcard, buildWildcardPrompts } from '../lib/wildcard.js';
 
 const evidence = {
   date: '2026-11-08',
@@ -54,6 +54,18 @@ function stubContext({ generate, critique }) {
     }
   };
 }
+
+test('extractJson tolerates prose and fences around the JSON, and rejects non-JSON', () => {
+  assert.deepEqual(extractJson('{"a": 1}'), { a: 1 });
+  assert.deepEqual(extractJson('Here are the ideas:\n```json\n{"a": 1}\n```\nHope that helps.'), { a: 1 });
+  assert.deepEqual(extractJson('Sure! {"a": {"b": 2}} Let me know.'), { a: { b: 2 } });
+  assert.throws(() => extractJson('I cannot help with that.'), /no JSON/);
+});
+
+test('invalid JSON errors include the start of the reply for diagnosis', () => {
+  const ev = normalizeEvidence(evidence);
+  assert.throws(() => parseIdeas('I am sorry, but I cannot do that.', ev), /starts: "I am sorry/);
+});
 
 test('normalizeEvidence rejects duplicate ids and empty text', () => {
   assert.throws(() => normalizeEvidence({ items: [{ id: 'x', text: 'a' }, { id: 'x', text: 'b' }] }), /duplicate/);
