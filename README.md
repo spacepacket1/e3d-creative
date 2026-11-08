@@ -10,7 +10,7 @@ current `e3d-cast` pipeline.
 Current scope is deliberately narrow:
 
 - no rendering
-- no e3d-corp integration
+- no e3d-corp integration in this repo (it has no corp code; e3d-corp invokes this CLI to commission creative)
 - no hosting, billing, or web UI
 - no autonomous publishing and no spend authority
 - no new e3d-pod2vid provider adapter
@@ -344,6 +344,45 @@ with the real server.
 - A passed check does not prove a claim is true, complete, current, or legally safe.
 - A failed or not-run check should block trust, not replace review.
 - Known limits: the checker only sees retrieved approved notes, it can miss subtle paraphrases, and it does not auto-recheck when a relied-on claim later changes or expires.
+
+## Wild Card: Practical Ideas Plus One Moonshot
+
+```bash
+e3d-creative wildcard evidence.json --out /tmp/wildcard \
+  [--brain-config <read-only config>] [--brain-main <path to ebrain main.js>] \
+  [--concept-provider <claude|openai>] [--critique-provider <claude|openai>]
+```
+
+`evidence.json` is `{ "date": "...", "items": [{ "id": "e1", "section": "...", "text": "..." }] }`. The command looks at the
+evidence through four lenses and proposes two kinds of idea for using AI in sales or marketing:
+
+- **Practical** (up to two kept): outsider, constraint and inversion lenses. Sensible, specific, and testable today with no spend.
+- **Moonshot** (at most one kept): the stunt lens. Audacious and possibly nuts, the kind of idea where even failing is a story
+  worth retelling. It must state its honest worst case, a rough cost and the cheapest rehearsal. It must not deceive or
+  impersonate anyone, harass or endanger anyone, break a law or a platform's rules, or involve spending money or contacting
+  people without a human decision.
+
+Every idea must cite evidence ids that exist in the file, or it is dropped. A second pass, on the other vendor's model by
+default, is written as a skeptic with a different bar for each kind (strict for practical ideas; safety, grounding and honesty
+about cost for the moonshot). The result is written to `<out>/wildcard.json` with `status` `ideas` or `none`, and `none` is a
+normal result. If the skeptic's answer cannot be used, all ideas are dropped rather than shipped unreviewed.
+
+This is how e3d-corp's daily Pilot brief gets its optional "Ideas worth trying" and "Wild card" sections
+(`pilotBrief.js --wildcard`). Each part is left out when nothing survives.
+
+Things to know:
+
+- **Speculative, not an ad.** Output is planning ideas. It is not claims-checked, has no spend or publishing authority, and a
+  human decides whether to do anything with it.
+- **Brain context is optional and reads a general vault on purpose.** With `--brain-config`/`--brain-main` it lists the
+  `notes/` folder and reads notes whose status is `accepted`, as context for the lenses. This is a different feature from claims
+  grounding: the "do not point this at a general vault" rule above applies to claims grounding, where the reader trusts a note's
+  own status. Here nothing is treated as an approved claim. The same read-only guard applies, so the brain instance must expose
+  no write tools (use a `mode: "read-only"` config over the vault). If the brain is unavailable, the run still happens and
+  `wildcard.json` records `brain.status` and the reason.
+- **Data sent to model providers.** The evidence items and the brain notes are sent to the selected providers. Do not put
+  personal data in the evidence; e3d-corp leaves out booking details, customer names and emails.
+- **No measured effect.** The lenses are perspectives. Nothing here shows they produce better ideas than not using them.
 
 ## License
 
